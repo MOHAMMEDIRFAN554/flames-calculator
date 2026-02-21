@@ -10,26 +10,34 @@ import { calculateFlames, FlamesResult } from "@/lib/flames";
 export default function Home() {
   const [state, setState] = useState<"idle" | "loading" | "result">("idle");
   const [result, setResult] = useState<FlamesResult | null>(null);
+  const [names, setNames] = useState({ name1: "", name2: "" });
 
   const handleCalculate = async (name1: string, name2: string) => {
+    setNames({ name1, name2 });
     setState("loading");
 
-    // Logic is calculated but hidden during loading
-    const finalResult = calculateFlames(name1, name2);
-    setResult(finalResult);
-
-    // Save to DB in background
     try {
-      fetch("/api/save-result", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name1, name2, result: finalResult }),
-      });
-    } catch (e) {
-      console.error("Failed to save result", e);
+      const finalResult = calculateFlames(name1, name2);
+      setResult(finalResult);
+
+      // Save to DB in background
+      try {
+        console.log("Frontend: Sending results to DB...");
+        const response = await fetch("/api/save-result", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name1, name2, result: finalResult }),
+        });
+        const data = await response.json();
+        console.log("Frontend: DB Save Response:", data);
+      } catch (e) {
+        console.error("Frontend: Failed to save result", e);
+      }
+    } catch (error) {
+      console.error("Calculation failed:", error);
     }
 
-    // Artificial delay for loading experience
+    // Artificial cinematic delay
     setTimeout(() => {
       setState("result");
     }, 3000);
@@ -38,46 +46,49 @@ export default function Home() {
   const reset = () => {
     setState("idle");
     setResult(null);
+    setNames({ name1: "", name2: "" });
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#1a0b2e] via-[#4a1a4a] to-[#2e1a4a] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background blobs for aesthetic */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pink-500/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[150px] rounded-full" />
+    <main className="min-h-screen bg-[#0a0510] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-pink-900/20 blur-[150px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-purple-900/20 blur-[180px] rounded-full animate-pulse [animation-delay:2s]" />
+      </div>
 
-      <div className="z-10 w-full flex flex-col items-center">
-        <header className="mb-12 text-center">
+      <div className="z-10 w-full flex flex-col items-center max-w-4xl space-y-12">
+        <header className="text-center space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-white/40 uppercase tracking-[0.4em] backdrop-blur-sm"
+          >
+            The Ultimate Affinity Check
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 drop-shadow-sm mb-2"
+            className="text-7xl md:text-9xl font-black text-white tracking-tighter"
           >
-            FLAMES
+            F<span className="text-pink-500">L</span>AM<span className="text-purple-500">E</span>S
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-white/60 tracking-[0.2em] font-light text-sm uppercase"
-          >
-            Discover Your Destiny
-          </motion.p>
+          <div className="h-1 w-24 bg-gradient-to-r from-transparent via-pink-500 to-transparent mx-auto opacity-50" />
         </header>
 
-        <section className="w-full flex justify-center items-center py-4">
+        <section className="w-full flex justify-center items-center">
           <AnimatePresence mode="wait">
             {state === "idle" && (
-              <NameForm key="form" onCalculate={handleCalculate} />
+              <NameForm key="idle-form" onCalculate={handleCalculate} isLoading={false} />
             )}
 
             {state === "loading" && (
               <motion.div
-                key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                key="loading-screen"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="w-full max-w-md py-12"
+                className="w-full flex justify-center"
               >
                 <LoadingScreen />
               </motion.div>
@@ -85,26 +96,38 @@ export default function Home() {
 
             {state === "result" && result && (
               <ResultCard
-                key="result"
+                key="result-card"
                 result={result}
                 onReset={reset}
+                name1={names.name1}
+                name2={names.name2}
               />
             )}
           </AnimatePresence>
         </section>
 
-        <footer className="mt-16 text-white/30 text-xs flex flex-col items-center gap-2">
-          <div className="flex items-center gap-4">
-            <span>F - Friends</span>
-            <span>L - Love</span>
-            <span>A - Attraction</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span>M - Marriage</span>
-            <span>E - Enemy</span>
-            <span>S - Sister</span>
-          </div>
-        </footer>
+        {state === "idle" && (
+          <footer className="pt-12 text-center space-y-6">
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10">
+              {[
+                { l: "F", m: "Friends" },
+                { l: "L", m: "Love" },
+                { l: "A", m: "Attraction" },
+                { l: "M", m: "Marriage" },
+                { l: "E", m: "Enemy" },
+                { l: "S", m: "Sister" },
+              ].map((item) => (
+                <div key={item.l} className="flex flex-col items-center gap-1 group">
+                  <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white font-black group-hover:bg-white/10 transition-colors shadow-lg">
+                    {item.l}
+                  </span>
+                  <span className="text-[10px] uppercase text-white/30 font-bold tracking-widest">{item.m}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-white/10 text-[10px] tracking-widest uppercase">Trusted by thousands of destiny seekers</p>
+          </footer>
+        )}
       </div>
     </main>
   );

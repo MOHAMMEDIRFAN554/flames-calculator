@@ -19,6 +19,7 @@ if (!cached) {
 
 async function dbConnect() {
     if (cached.conn) {
+        console.log("DB: Using cached connection");
         return cached.conn;
     }
 
@@ -27,11 +28,24 @@ async function dbConnect() {
             bufferCommands: false,
         };
 
+        console.log("DB: Initiating new connection to", MONGODB_URI.split("@")[1]); // Log host only for safety
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+            console.log("DB: Connection established successfully");
             return mongoose;
+        }).catch(err => {
+            console.error("DB: Connection error:", err);
+            cached.promise = null; // Reset promise on error to allow retry
+            throw err;
         });
     }
-    cached.conn = await cached.promise;
+
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null; // Ensure retry on next call
+        throw e;
+    }
+
     return cached.conn;
 }
 
