@@ -11,12 +11,23 @@ export default function Home() {
   const [state, setState] = useState<"idle" | "loading" | "result">("idle");
   const [result, setResult] = useState<FlamesResult | null>(null);
 
-  const handleCalculate = (name1: string, name2: string) => {
+  const handleCalculate = async (name1: string, name2: string) => {
     setState("loading");
 
     // Logic is calculated but hidden during loading
     const finalResult = calculateFlames(name1, name2);
     setResult(finalResult);
+
+    // Save to DB in background
+    try {
+      fetch("/api/save-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name1, name2, result: finalResult }),
+      });
+    } catch (e) {
+      console.error("Failed to save result", e);
+    }
 
     // Artificial delay for loading experience
     setTimeout(() => {
