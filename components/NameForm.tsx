@@ -126,7 +126,7 @@ const NameForm = ({ onCalculate, isLoading }: NameFormProps) => {
                     </div>
                 </motion.button>
 
-                <p className="text-center text-[10px] text-white/20 uppercase tracking-widest font-medium">Your data is stored securely in our stardust database.</p>
+                {/* <p className="text-center text-[10px] text-white/20 uppercase tracking-widest font-medium">Your data is stored securely in our stardust database.</p> */}
             </form>
         </motion.div>
     );
