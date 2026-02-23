@@ -1,4 +1,11 @@
 import mongoose from "mongoose";
+import dns from "dns";
+
+// Set custom DNS to resolve SRV records properly in some environments
+if (typeof window === "undefined") {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+}
+
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 
@@ -26,6 +33,7 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
+            family: 4,
         };
 
         console.log("DB: Initiating new connection to", MONGODB_URI.split("@")[1]); // Log host only for safety
